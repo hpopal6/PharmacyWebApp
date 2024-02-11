@@ -41,7 +41,7 @@ public class ControllerPatientCreate {
 		/*
 		 * validate doctor last name and find the doctor id
 		 */
-		// TODO
+		// TO-DO
 		int doctor_id = 0;
 		try (Connection con = getConnection();) {
 			PreparedStatement ps = con.prepareStatement("select id from doctor where last_name=?");
