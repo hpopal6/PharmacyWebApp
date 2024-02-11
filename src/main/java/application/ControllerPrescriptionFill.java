@@ -240,13 +240,37 @@ public class ControllerPrescriptionFill {
 		}
 
 		// update prescription
+		refills--;
+		try (Connection con = getConnection();) {
+			PreparedStatement ps = con.prepareStatement(
+					"update prescription set refills=? where rxid=?");
+			ps.setInt(1, refills);
+			ps.setInt(2, rxid_id);
 
+			// rc is row count from executeUpdate
+			// should be 1
+			int rc = ps.executeUpdate();
 
+			if (rc == 1) {
+				// show the updated prescription with the most recent fill information
+				model.addAttribute("message", "Prescription filled.");
+				model.addAttribute("prescription", p);
+			} else {
+				model.addAttribute("message", "Error. Update was not successful");
+				model.addAttribute("prescription", p);
+				return "prescription_fill";
+			}
+		} catch (SQLException e) {
+			model.addAttribute("message", "SQL Error."+e.getMessage());
+			model.addAttribute("prescription", p);
+			return "prescription_fill";
+		}
 
-		// show the updated prescription with the most recent fill information
-		model.addAttribute("message", "Prescription filled.");
-		model.addAttribute("prescription", p);
-		return "prescription_show";
+//
+//		// show the updated prescription with the most recent fill information
+//		model.addAttribute("message", "Prescription filled.");
+//		model.addAttribute("prescription", p);
+//		return "prescription_show";
 	}
 	
 	private Connection getConnection() throws SQLException {
