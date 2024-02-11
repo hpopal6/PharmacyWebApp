@@ -207,6 +207,30 @@ public class ControllerPrescriptionFill {
 				qtyPharmacy = rs.getInt(1);
 				price = rs.getBigDecimal(2);
 				cost = price.multiply(BigDecimal.valueOf(p.getQuantity()));
+
+
+				p.setRxid(rxid_id);
+
+				p.setDoctor_id(doctor_id);
+				p.setDoctorFirstName(dr_first_name);
+				p.setDoctorLastName(dr_last_name);
+
+				p.setPatient_id(patient_id);
+				p.setPatientFirstName(p_first_name);
+				p.setPatientLastName(p_last_name);
+
+				p.setDrugName(p.getDrugName());
+				p.setQuantity(p.getQuantity());
+				p.setRefillsRemaining(refills);
+
+				p.setPharmacyID(pharmacy_id);
+				p.setPharmacyName(p.getPharmacyName());
+				p.setPharmacyAddress(p.getPharmacyAddress());
+				p.setPharmacyPhone(phone);
+
+				p.setDateFilled(p.getDateFilled());
+				p.setCost(cost.toPlainString());
+
 			} else {
 				model.addAttribute("message", "Drug not found.");
 				model.addAttribute("prescription", p);
