@@ -208,7 +208,6 @@ public class ControllerPrescriptionFill {
 				price = rs.getBigDecimal(2);
 				cost = price.multiply(BigDecimal.valueOf(p.getQuantity()));
 
-
 				p.setRxid(rxid_id);
 
 				p.setDoctor_id(doctor_id);
