@@ -255,6 +255,7 @@ public class ControllerPrescriptionFill {
 				// show the updated prescription with the most recent fill information
 				model.addAttribute("message", "Prescription filled.");
 				model.addAttribute("prescription", p);
+				return "prescription_show";
 			} else {
 				model.addAttribute("message", "Error. Update was not successful");
 				model.addAttribute("prescription", p);
