@@ -222,8 +222,7 @@ public class ControllerPrescriptionFill {
 				price = rs.getBigDecimal(2);
 				cost = price.multiply(BigDecimal.valueOf(rxQuantity));
 
-				p.setRxid(rxid_id);
-
+				//p.setRxid(rxid_id);
 				p.setDoctor_id(doctor_id);
 				p.setDoctorFirstName(dr_first_name);
 				p.setDoctorLastName(dr_last_name);
