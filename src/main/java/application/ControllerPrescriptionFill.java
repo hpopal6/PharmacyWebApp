@@ -38,11 +38,13 @@ public class ControllerPrescriptionFill {
 		// TODO
 
 		int pharmacy_id = 0;
-		String phone = "";
+		String pharmacyPhone = "";
+		String pharmacyName = "";
+		String pharmacyAddress = "";
 
 		try (Connection con = getConnection();) {
 			PreparedStatement ps = con.prepareStatement(
-					"select id, phone " +
+					"select id, phone, name, address " +
 							"from pharmacy " +
 							"where name=? and address=?");
 			ps.setString(1, p.getPharmacyName());
@@ -51,7 +53,8 @@ public class ControllerPrescriptionFill {
 			ResultSet rs = ps.executeQuery();
 			if (rs.next()) {
 				pharmacy_id = rs.getInt(1);
-				phone = rs.getString(2);
+				pharmacyPhone = rs.getString(2);
+				System.out.println("pharmacy");
 			} else {
 				model.addAttribute("message", "Pharmacy not found.");
 				model.addAttribute("prescription", p);
@@ -80,6 +83,7 @@ public class ControllerPrescriptionFill {
 				patient_id = rs.getInt(1);
 				p_last_name = rs.getString(2);
 				p_first_name = rs.getString(3);
+				System.out.println("patient");
 			} else {
 				model.addAttribute("message", "Patient not found.");
 				model.addAttribute("prescription", p);
@@ -96,11 +100,14 @@ public class ControllerPrescriptionFill {
 		int doctor_id = 0;
 		int drug_id = 0;
 		int refills = 0;
+		int rxQuantity = 0;
+		String drugName = "";
 		try (Connection con = getConnection();) {
 			PreparedStatement ps = con.prepareStatement(
-					"select rxid, doctor_id, drug_id, refills" +
-							"from prescription " +
-							"where rxid=?");
+					"select p.rxid, p.doctor_id, p.drug_id, p.refills, p.quantity, d.name " +
+							"from prescription p " +
+							"join drug d on p.drug_id = d.id " +
+							"where p.rxid=?");
 			ps.setInt(1, p.getRxid());
 
 			ResultSet rs = ps.executeQuery();
@@ -110,6 +117,9 @@ public class ControllerPrescriptionFill {
 				doctor_id = rs.getInt(2);
 				drug_id = rs.getInt(3);
 				refills = rs.getInt(4);
+				rxQuantity = rs.getInt(5);
+				drugName = rs.getString(6);
+				System.out.println("prescription drug");
 			} else {
 				model.addAttribute("message", "Prescription not found.");
 				model.addAttribute("prescription", p);
@@ -130,23 +140,24 @@ public class ControllerPrescriptionFill {
 		int count = 0;
 		try (Connection con = getConnection();) {
 			PreparedStatement ps = con.prepareStatement(
-					"select count(rxid)" +
+					"select count(rxid_id) " +
 							"from prescription_fill " +
-							"where rxid=?");
+							"where rxid_id=?");
 			ps.setInt(1, p.getRxid());
 
 			ResultSet rs = ps.executeQuery();
 
 			if (rs.next()) {
 				count = rs.getInt(1);
+				System.out.println("prescription_fill, refills/count: " + refills +"/" + count);
 			}
-			int remaining = refills - count;
-			if (remaining < 1 ){
+			refills = refills + 1 - count; // +1 is because every prescription can be filled at least once
+			if (refills < 1 ){
 				model.addAttribute("message", "No prescription refills remaining.");
 				model.addAttribute("prescription", p);
 				return "prescription_fill";
 			} else {
-				model.addAttribute("message", "Prescription refills remaining: " + remaining);
+				model.addAttribute("message", "Prescription refills remaining: " + refills);
 				model.addAttribute("prescription", p);
 			}
 		} catch (SQLException e) {
@@ -172,8 +183,9 @@ public class ControllerPrescriptionFill {
 			ResultSet rs = ps.executeQuery();
 
 			if (rs.next()) {
-				dr_last_name = rs.getString(2);
-				dr_first_name = rs.getString(3);
+				dr_last_name = rs.getString(1);
+				dr_first_name = rs.getString(2);
+				System.out.println("doctor");
 			} else {
 				model.addAttribute("message", "Doctor not found.");
 				model.addAttribute("prescription", p);
@@ -189,24 +201,26 @@ public class ControllerPrescriptionFill {
 		/*
 		 * calculate cost of prescription
 		 */
-		// TODO 
-		int qtyPharmacy = p.getQuantity();
+		// TODO
+		refills--;
+		int qtyPharmacy = 0;
 		BigDecimal cost = new BigDecimal("0.0");
 		BigDecimal price = new BigDecimal("0.0");
+		String fillDate = LocalDate.now().toString();
 		try (Connection con = getConnection();) {
 			PreparedStatement ps = con.prepareStatement(
 					"select quantity, price " +
 							"from drug_cost " +
 							"where drug_id=? and pharmacy_id=?");
 			ps.setInt(1, drug_id);
-			ps.setInt(1, pharmacy_id);
+			ps.setInt(2, pharmacy_id);
 
 			ResultSet rs = ps.executeQuery();
 
 			if (rs.next()) {
 				qtyPharmacy = rs.getInt(1);
 				price = rs.getBigDecimal(2);
-				cost = price.multiply(BigDecimal.valueOf(p.getQuantity()));
+				cost = price.multiply(BigDecimal.valueOf(rxQuantity));
 
 				p.setRxid(rxid_id);
 
@@ -218,17 +232,20 @@ public class ControllerPrescriptionFill {
 				p.setPatientFirstName(p_first_name);
 				p.setPatientLastName(p_last_name);
 
-				p.setDrugName(p.getDrugName());
-				p.setQuantity(p.getQuantity());
+				p.setDrugName(drugName);
+				p.setQuantity(rxQuantity);
 				p.setRefillsRemaining(refills);
+				p.setRefills(refills);
 
 				p.setPharmacyID(pharmacy_id);
 				p.setPharmacyName(p.getPharmacyName());
 				p.setPharmacyAddress(p.getPharmacyAddress());
-				p.setPharmacyPhone(phone);
+				p.setPharmacyPhone(pharmacyPhone);
 
-				p.setDateFilled(p.getDateFilled());
-				p.setCost(cost.toPlainString());
+				p.setDateFilled(fillDate);
+				p.setCost(cost.toString());
+				System.out.println("rxid_id: " + rxid_id);
+				System.out.println("cost: " + cost + " : " + cost.toString());
 
 			} else {
 				model.addAttribute("message", "Drug not found.");
@@ -251,7 +268,7 @@ public class ControllerPrescriptionFill {
 			ps.setInt(1, rxid_id);
 			ps.setInt(2, pharmacy_id);
 			ps.setBigDecimal(3, cost);
-			ps.setString(4, LocalDate.now().toString());
+			ps.setString(4, fillDate);
 
 			ps.executeUpdate();
 			ResultSet rs = ps.getGeneratedKeys();
@@ -263,38 +280,37 @@ public class ControllerPrescriptionFill {
 		}
 
 		// update prescription
-		refills--;
-		try (Connection con = getConnection();) {
-			PreparedStatement ps = con.prepareStatement(
-					"update prescription set refills=? where rxid=?");
-			ps.setInt(1, refills);
-			ps.setInt(2, rxid_id);
-
-			// rc is row count from executeUpdate
-			// should be 1
-			int rc = ps.executeUpdate();
-
-			if (rc == 1) {
-				// show the updated prescription with the most recent fill information
-				model.addAttribute("message", "Prescription filled.");
-				model.addAttribute("prescription", p);
-				return "prescription_show";
-			} else {
-				model.addAttribute("message", "Error. Update was not successful");
-				model.addAttribute("prescription", p);
-				return "prescription_fill";
-			}
-		} catch (SQLException e) {
-			model.addAttribute("message", "SQL Error."+e.getMessage());
-			model.addAttribute("prescription", p);
-			return "prescription_fill";
-		}
+//		try (Connection con = getConnection();) {
+//			PreparedStatement ps = con.prepareStatement(
+//					"update prescription set refills=? where rxid=?");
+//			ps.setInt(1, refills);
+//			ps.setInt(2, rxid_id);
+//
+//			// rc is row count from executeUpdate
+//			// should be 1
+//			int rc = ps.executeUpdate();
+//
+//			if (rc == 1) {
+//				// show the updated prescription with the most recent fill information
+//				model.addAttribute("message", "Prescription filled.");
+//				model.addAttribute("prescription", p);
+//				return "prescription_show";
+//			} else {
+//				model.addAttribute("message", "Error. Update was not successful");
+//				model.addAttribute("prescription", p);
+//				return "prescription_fill";
+//			}
+//		} catch (SQLException e) {
+//			model.addAttribute("message", "SQL Error."+e.getMessage());
+//			model.addAttribute("prescription", p);
+//			return "prescription_fill";
+//		}
 
 //
 //		// show the updated prescription with the most recent fill information
-//		model.addAttribute("message", "Prescription filled.");
-//		model.addAttribute("prescription", p);
-//		return "prescription_show";
+		model.addAttribute("message", "Prescription filled.");
+		model.addAttribute("prescription", p);
+		return "prescription_show";
 	}
 	
 	private Connection getConnection() throws SQLException {
